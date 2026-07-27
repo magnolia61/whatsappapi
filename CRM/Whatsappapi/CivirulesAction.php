@@ -48,6 +48,32 @@ class CRM_Whatsappapi_CivirulesAction extends CRM_CivirulesActions_Generic_Api {
     if ($triggerData->getEntity() == 'Activity') {
       $parameters['activity_id'] = $triggerData->getEntityId();
     }
+
+    // Zet de tekst van de message template klaar. Dit MOET hier gebeuren: de whatsapp-extensie
+    // declareert template_id wel in zijn API-spec, maar leest de template nergens uit - zonder
+    // deze stap vertrekt er een leeg bericht. (smsapi doet hetzelfde werk in zijn eigen
+    // api/v3/Sms/Send.php.)
+    //
+    // Alleen de RUWE tekst meegeven, geen tokens vervangen: dat doet Whatsapp::send() zelf via
+    // Whatsapp.replaceTokens. Zou je het hier ook doen, dan draait de tokenvervanging twee keer.
+    if (!empty($parameters['template_id']) && empty($parameters['text'])) {
+      $messageTemplate = new CRM_Core_DAO_MessageTemplate();
+      $messageTemplate->id = $parameters['template_id'];
+      if ($messageTemplate->find(TRUE)) {
+        $tekst = $messageTemplate->msg_text;
+        if (empty($tekst) && !empty($messageTemplate->msg_html)) {
+          // Alleen een HTML-body: platmaken, want WhatsApp kent geen HTML.
+          $tekst = CRM_Utils_String::htmlToText($messageTemplate->msg_html);
+        }
+        $parameters['text'] = $tekst;
+      }
+      else {
+        Civi::log()->warning('whatsappapi: message template @id niet gevonden, bericht zou leeg zijn.', [
+          '@id' => $parameters['template_id'],
+        ]);
+      }
+    }
+
     return $parameters;
   }
 
