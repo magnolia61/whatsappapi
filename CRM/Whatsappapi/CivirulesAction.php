@@ -59,18 +59,24 @@ class CRM_Whatsappapi_CivirulesAction extends CRM_CivirulesActions_Generic_Api {
     if (!empty($parameters['template_id']) && empty($parameters['text'])) {
       $messageTemplate = new CRM_Core_DAO_MessageTemplate();
       $messageTemplate->id = $parameters['template_id'];
+      $messageTemplate->is_active = TRUE;
       if ($messageTemplate->find(TRUE)) {
         $tekst = $messageTemplate->msg_text;
         if (empty($tekst) && !empty($messageTemplate->msg_html)) {
           // Alleen een HTML-body: platmaken, want WhatsApp kent geen HTML.
           $tekst = CRM_Utils_String::htmlToText($messageTemplate->msg_html);
         }
+        if (trim((string) $tekst) === '') {
+          throw new CRM_Core_Exception(
+            'whatsappapi: message template ' . $parameters['template_id'] . ' has no text or HTML body.'
+          );
+        }
         $parameters['text'] = $tekst;
       }
       else {
-        Civi::log()->warning('whatsappapi: message template @id niet gevonden, bericht zou leeg zijn.', [
-          '@id' => $parameters['template_id'],
-        ]);
+        throw new CRM_Core_Exception(
+          'whatsappapi: active message template ' . $parameters['template_id'] . ' was not found.'
+        );
       }
     }
 
