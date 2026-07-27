@@ -1,0 +1,3 @@
+[
+  {"name":"whatsappapi_send","label":"Send WhatsApp","class_name":"CRM_Whatsappapi_CivirulesAction"}
+]

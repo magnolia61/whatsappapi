@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<extension key="whatsappapi" type="module">
+  <file>whatsappapi</file>
+  <name>WhatsApp API</name>
+  <description>CiviRules action to send a WhatsApp message from a message template, in the same spirit as the smsapi and emailapi extensions. The actual sending is delegated to the whatsapp extension, so every provider it supports works.</description>
+  <license>AGPL-3.0</license>
+  <authors>
+    <author>
+      <name>Richard van Oosterhout</name>
+      <email>webteam@onvergetelijk.nl</email>
+      <role>Maintainer</role>
+    </author>
+  </authors>
+  <urls>
+    <url desc="Main Extension Page">https://www.onvergetelijk.nl</url>
+    <url desc="Licensing">https://www.gnu.org/licenses/agpl-3.0.html</url>
+  </urls>
+  <releaseDate>2026-07-27</releaseDate>
+  <version>1.0.0</version>
+  <develStage>alpha</develStage>
+  <compatibility>
+    <ver>6.16</ver>
+  </compatibility>
+  <comments>Calls Whatsapp.send (APIv3) from the whatsapp extension via CiviRules' generic API action.</comments>
+  <upgrader>CRM_Whatsappapi_Upgrader</upgrader>
+  <requires>
+    <ext>org.civicoop.civirules</ext>
+    <ext>whatsapp</ext>
+  </requires>
+  <classloader>
+    <psr0 prefix="CRM_" path="."/>
+    <psr4 prefix="Civi\" path="Civi"/>
+  </classloader>
+  <civix>
+    <namespace>CRM/Whatsappapi</namespace>
+    <format>25.01.1</format>
+  </civix>
+  <mixins>
+    <mixin>menu-xml@1.0.0</mixin>
+    <mixin>smarty-v2@1.0.1</mixin>
+  </mixins>
+</extension>
