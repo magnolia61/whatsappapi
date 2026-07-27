@@ -52,6 +52,17 @@ with one caveat: only **fully qualified** tokens are replaced. `{contact.first_n
 
 ## Known issues
 
+* **The Twilio provider in `whatsapp` 1.2.7 does not work as released.** `Providers/Twilio.php`
+  implements only 2 of the 5 abstract methods, so `Provider::singleton()` dies with a fatal error
+  before anything reaches Twilio — and several further bugs block sending from a rule entirely
+  (permission checks on internal bookkeeping, `sender_id = 0` violating a foreign key, and `$type`
+  being ignored so a template request went out as plain text). Fixes are proposed upstream in
+  [merge request !2](https://lab.civicrm.org/extensions/whatsapp/-/merge_requests/2). Until that
+  is merged you need those patches, otherwise this action cannot send over Twilio. 360Dialog is
+  unaffected.
+* The `whatsapp` extension ships no `vendor/` directory, so install the SDK yourself in its
+  directory (`composer require "twilio/sdk:^8.11"`) — and again after every update, since
+  `vendor/` is gitignored there.
 * Media messages (image, document, video, audio) are not supported from a rule: a rule has no way
   to supply a file.
 * The action inherits whatever the `whatsapp` extension's provider can do. If a provider is
