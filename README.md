@@ -50,6 +50,25 @@ The message body comes from the selected message template, so tokens behave as t
 with one caveat: only **fully qualified** tokens are replaced. `{contact.first_name}` works,
 `{first_name}` is left in the text verbatim.
 
+### token_example en de Smarty-instelling horen bij elkaar
+
+De variabelen-JSON in *token_example* gaat door dezelfde tokenvervanger als de berichttekst,
+en dus ook door Smarty wanneer de rule op *Use Smarty* staat. De twee combinaties die werken:
+
+* **Smarty uit** (`smarty=disable`) + token_example als **gewone JSON**:
+  `{"1":"{contact.first_name}","2":"cid1={contact.contact_id}&{contact.checksum}"}`.
+  Alleen CiviCRM-tokens, geen `{$...}`-variabelen. Dit is de standaardkeuze.
+* **Smarty aan** (`smarty=use`) + token_example met **`{ldelim}`/`{rdelim}`** in plaats van
+  letterlijke accolades, zodat Smarty de JSON niet als eigen syntax leest:
+  `{capture assign="otlfull"}{contact.custom_2216}{/capture}{assign var="otlsuffix" value=$otlfull|regex_replace:"#^https://www\.onvergetelijk\.nl/#":""}{ldelim}"1":"{contact.first_name}","2":"{$user_kampkort}","3":"{$otlsuffix}"{rdelim}`.
+  Nodig zodra een variabele Smarty vergt: `{$user_kampkort}` e.d. (het subjectvars-blok van
+  nl.onvergetelijk.cssinliner) of string-bewerkingen zoals het afknippen van het domein van de
+  one-time-loginlink (PRIVACY `onetimelink_url`, custom 2216) tot het pad-suffix voor een
+  URL-knop.
+
+De verkeerde combinatie faalt pas bij het vuren van de rule: gewone JSON door Smarty geeft een
+parse-fout, `{ldelim}` zonder Smarty blijft letterlijk staan en levert ongeldige JSON op.
+
 ## Known issues
 
 * **The Twilio provider in `whatsapp` 1.2.7 does not work as released.** `Providers/Twilio.php`
