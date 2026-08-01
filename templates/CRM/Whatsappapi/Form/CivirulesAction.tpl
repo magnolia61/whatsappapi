@@ -12,13 +12,18 @@
     <div class="clear"></div>
   </div>
   <div class="crm-section">
+    <div class="label">{$form.type.label}</div>
+    <div class="content">{$form.type.html}</div>
+    <div class="clear"></div>
+  </div>
+  <div class="crm-section message_template_row">
     <div class="label">{$form.template_id.label}</div>
     <div class="content">{$form.template_id.html}</div>
     <div class="clear"></div>
   </div>
-  <div class="crm-section">
-    <div class="label">{$form.type.label}</div>
-    <div class="content">{$form.type.html}</div>
+  <div class="crm-section whatsapp_template_row">
+    <div class="label">{$form.whatsapp_template_id.label}</div>
+    <div class="content">{$form.whatsapp_template_id.html}</div>
     <div class="clear"></div>
   </div>
   <div class="crm-section">
@@ -50,8 +55,10 @@
   <script type="text/javascript">
     cj(function() {
       cj('#alternative_receiver').change(triggerAlternativeReceiverChange);
+      cj('#type').change(triggerTypeChange);
 
       triggerAlternativeReceiverChange();
+      triggerTypeChange();
     });
 
     function triggerAlternativeReceiverChange() {
@@ -60,6 +67,15 @@
       if (val) {
         cj('.crm-section.alternative_receiver_phone_number').removeClass('hiddenElement');
       }
+    }
+
+    // Toon per message type de bijbehorende template-select: msg_template bij 'text',
+    // civicrm_whatsapp_template bij 'template'. Beide tonen zou uitnodigen om de
+    // verkeerde in te vullen; de server-side validatie blijft het vangnet.
+    function triggerTypeChange() {
+      var type = cj('#type').val();
+      cj('.crm-section.message_template_row').toggleClass('hiddenElement', type !== 'text');
+      cj('.crm-section.whatsapp_template_row').toggleClass('hiddenElement', type !== 'template');
     }
   </script>
 {/literal}

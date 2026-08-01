@@ -49,6 +49,36 @@ class CRM_Whatsappapi_CivirulesAction extends CRM_CivirulesActions_Generic_Api {
       $parameters['activity_id'] = $triggerData->getEntityId();
     }
 
+    // Type 'template': een provider-side goedgekeurde template (bij Twilio een Content
+    // Template). LET OP de naad: template_id betekent in deze route iets anders dan bij
+    // 'text'. De Twilio-provider zoekt er een rij in civicrm_whatsapp_template mee op
+    // (namespace = Content SID, token_example = variabelen-JSON), GEEN msg_template.
+    // Daarom bewaart het formulier de keuze apart als whatsapp_template_id en wordt die
+    // hier op template_id gezet; de msg_template-hydratie hieronder blijft buiten schot.
+    if (($parameters['type'] ?? 'text') === 'template') {
+      if (empty($parameters['whatsapp_template_id'])) {
+        throw new CRM_Core_Exception(
+          'whatsappapi: message type "template" requires a WhatsApp template (whatsapp_template_id).'
+        );
+      }
+      $whatsappTemplate = \Civi\Api4\WhatsappTemplate::get(FALSE)
+        ->addWhere('id', '=', $parameters['whatsapp_template_id'])
+        ->addWhere('is_active', '=', TRUE)
+        ->execute()
+        ->first();
+      if (empty($whatsappTemplate)) {
+        throw new CRM_Core_Exception(
+          'whatsappapi: active WhatsApp template ' . $parameters['whatsapp_template_id'] . ' was not found.'
+        );
+      }
+      // De tekst is in deze route alleen de lokale weerslag (civicrm_whatsapp.body):
+      // wat de ontvanger daadwerkelijk ziet, rendert Meta uit de goedgekeurde template.
+      // De spiegel-tekst van de registratie meegeven houdt het archief leesbaar.
+      $parameters['text'] = $whatsappTemplate['text'];
+      $parameters['template_id'] = $whatsappTemplate['id'];
+      return $parameters;
+    }
+
     // Zet de tekst van de message template klaar. Dit MOET hier gebeuren: de whatsapp-extensie
     // declareert template_id wel in zijn API-spec, maar leest de template nergens uit - zonder
     // deze stap vertrekt er een leeg bericht. (smsapi doet hetzelfde werk in zijn eigen
@@ -103,7 +133,18 @@ class CRM_Whatsappapi_CivirulesAction extends CRM_CivirulesActions_Generic_Api {
     $params = $this->getActionParameters();
 
     $template = ts('unknown template');
-    if (!empty($params['template_id'])) {
+    if (($params['type'] ?? 'text') === 'template' && !empty($params['whatsapp_template_id'])) {
+      // Template-route: de titel komt uit civicrm_whatsapp_template, niet uit msg_template.
+      $whatsappTemplate = \Civi\Api4\WhatsappTemplate::get(FALSE)
+        ->addSelect('title')
+        ->addWhere('id', '=', $params['whatsapp_template_id'])
+        ->execute()
+        ->first();
+      if (!empty($whatsappTemplate['title'])) {
+        $template = $whatsappTemplate['title'];
+      }
+    }
+    elseif (!empty($params['template_id'])) {
       $messageTemplate = new CRM_Core_DAO_MessageTemplate();
       $messageTemplate->id = $params['template_id'];
       $messageTemplate->is_active = TRUE;

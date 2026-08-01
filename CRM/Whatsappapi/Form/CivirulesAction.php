@@ -65,6 +65,28 @@ class CRM_Whatsappapi_Form_CivirulesAction extends CRM_Core_Form {
   }
 
   /**
+   * Active WhatsApp templates from the whatsapp extension (civicrm_whatsapp_template).
+   *
+   * These are the provider-side goedgekeurde templates: bij Twilio een Content Template
+   * waarvan de SID in de namespace-kolom staat. Alleen deze zijn bruikbaar voor het
+   * message type 'template'; een gewone message template kan daar niets mee.
+   *
+   * @return array
+   */
+  protected function getWhatsappTemplates() {
+    $whatsappTemplates = [];
+    $query  = 'SELECT id, title, language FROM civicrm_whatsapp_template WHERE is_active = %1 ORDER BY title';
+    $params = [1 => [1, 'Integer']];
+    $dao    = CRM_Core_DAO::executeQuery($query, $params);
+    while ($dao->fetch()) {
+      $whatsappTemplates[$dao->id] = $dao->title . ($dao->language ? ' (' . $dao->language . ')' : '');
+    }
+    $whatsappTemplates[0] = '- select -';
+    asort($whatsappTemplates);
+    return $whatsappTemplates;
+  }
+
+  /**
    * Active WhatsApp providers from the whatsapp extension.
    *
    * @return array
@@ -103,8 +125,12 @@ class CRM_Whatsappapi_Form_CivirulesAction extends CRM_Core_Form {
 
     $this->add('hidden', 'rule_action_id');
     $this->add('select', 'provider_id', E::ts('WhatsApp provider'), $this->getWhatsappProviders(), TRUE);
-    $this->add('select', 'template_id', E::ts('Message template'), $this->getMessageTemplates(), TRUE);
+    // Welke van de twee template-selects verplicht is hangt af van het message type;
+    // dat dwingt validateTemplateChoice() af, dus hier geen required-vlag.
+    $this->add('select', 'template_id', E::ts('Message template (for type Text)'), $this->getMessageTemplates());
+    $this->add('select', 'whatsapp_template_id', E::ts('WhatsApp template (for type Template)'), $this->getWhatsappTemplates());
     $this->add('select', 'type', E::ts('Message type'), $this->getMessageTypes(), TRUE);
+    $this->addFormRule(['CRM_Whatsappapi_Form_CivirulesAction', 'validateTemplateChoice']);
     $this->addEntityRef('from_contact_id', E::ts('Message sender'));
     $this->add('select', 'smarty', E::ts('Smarty'), [
       'use'      => E::ts('Use Smarty'),
@@ -118,6 +144,29 @@ class CRM_Whatsappapi_Form_CivirulesAction extends CRM_Core_Form {
       ['type' => 'next', 'name' => E::ts('Save'), 'isDefault' => TRUE],
       ['type' => 'cancel', 'name' => E::ts('Cancel')],
     ]);
+  }
+
+  /**
+   * Per message type de juiste template-keuze afdwingen.
+   *
+   * 'text' rendert een gewone message template; 'template' verstuurt een provider-side
+   * goedgekeurde WhatsApp-template. Zonder deze check vertrekt er bij een verkeerde
+   * combinatie pas een foutmelding op het moment dat de rule vuurt - dat is te laat.
+   *
+   * @param array $values
+   *
+   * @return array|bool
+   */
+  public static function validateTemplateChoice($values) {
+    $errors = [];
+    $type = $values['type'] ?? 'text';
+    if ($type === 'text' && empty($values['template_id'])) {
+      $errors['template_id'] = E::ts('Message type Text requires a message template.');
+    }
+    if ($type === 'template' && empty($values['whatsapp_template_id'])) {
+      $errors['whatsapp_template_id'] = E::ts('Message type Template requires a WhatsApp template.');
+    }
+    return empty($errors) ? TRUE : $errors;
   }
 
   /**
@@ -137,6 +186,9 @@ class CRM_Whatsappapi_Form_CivirulesAction extends CRM_Core_Form {
     if (!empty($data['template_id'])) {
       $defaultValues['template_id'] = $data['template_id'];
     }
+    if (!empty($data['whatsapp_template_id'])) {
+      $defaultValues['whatsapp_template_id'] = $data['whatsapp_template_id'];
+    }
     $defaultValues['from_contact_id'] = $data['from_contact_id'] ?? NULL;
 
     if (!empty($data['alternative_receiver_phone_number'])) {
@@ -152,9 +204,10 @@ class CRM_Whatsappapi_Form_CivirulesAction extends CRM_Core_Form {
   }
 
   public function postProcess() {
-    $data['provider_id']     = $this->_submitValues['provider_id'];
-    $data['template_id']     = $this->_submitValues['template_id'];
-    $data['type']            = $this->_submitValues['type'] ?? 'template';
+    $data['provider_id']          = $this->_submitValues['provider_id'];
+    $data['template_id']          = $this->_submitValues['template_id'] ?? '';
+    $data['whatsapp_template_id'] = $this->_submitValues['whatsapp_template_id'] ?? '';
+    $data['type']                 = $this->_submitValues['type'] ?? 'template';
     $data['from_contact_id'] = $this->_submitValues['from_contact_id'] ?? CRM_Core_Session::getLoggedInContactID() ?? NULL;
 
     $data['alternative_receiver_phone_number'] = '';
