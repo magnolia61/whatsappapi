@@ -125,8 +125,8 @@ class CRM_Whatsappapi_Form_CivirulesAction extends CRM_Core_Form {
 
     $this->add('hidden', 'rule_action_id');
     $this->add('select', 'provider_id', E::ts('WhatsApp provider'), $this->getWhatsappProviders(), TRUE);
-    // Welke van de twee template-selects verplicht is hangt af van het message type;
-    // dat dwingt validateTemplateChoice() af, dus hier geen required-vlag.
+    // Which of the two template selects is required depends on the message type;
+    // validateTemplateChoice() enforces that, so no required flag here.
     $this->add('select', 'template_id', E::ts('Message template (for type Text)'), $this->getMessageTemplates());
     $this->add('select', 'whatsapp_template_id', E::ts('WhatsApp template (for type Template)'), $this->getWhatsappTemplates());
     $this->add('select', 'type', E::ts('Message type'), $this->getMessageTypes(), TRUE);

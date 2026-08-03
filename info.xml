@@ -12,12 +12,13 @@
     </author>
   </authors>
   <urls>
-    <url desc="Main Extension Page">https://www.onvergetelijk.nl</url>
+    <url desc="Main Extension Page">https://github.com/magnolia61/whatsappapi</url>
+    <url desc="Support">https://github.com/magnolia61/whatsappapi/issues</url>
     <url desc="Licensing">https://www.gnu.org/licenses/agpl-3.0.html</url>
   </urls>
   <releaseDate>2026-07-27</releaseDate>
   <version>1.0.0</version>
-  <develStage>alpha</develStage>
+  <develStage>beta</develStage>
   <compatibility>
     <ver>6.16</ver>
   </compatibility>

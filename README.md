@@ -50,24 +50,23 @@ The message body comes from the selected message template, so tokens behave as t
 with one caveat: only **fully qualified** tokens are replaced. `{contact.first_name}` works,
 `{first_name}` is left in the text verbatim.
 
-### token_example en de Smarty-instelling horen bij elkaar
+### token_example and the Smarty setting belong together
 
-De variabelen-JSON in *token_example* gaat door dezelfde tokenvervanger als de berichttekst,
-en dus ook door Smarty wanneer de rule op *Use Smarty* staat. De twee combinaties die werken:
+The variables JSON in *token_example* runs through the same token replacer as the message
+text, and therefore also through Smarty when the rule is set to *Use Smarty*. The two
+combinations that work:
 
-* **Smarty uit** (`smarty=disable`) + token_example als **gewone JSON**:
+* **Smarty off** (`smarty=disable`) + token_example as **plain JSON**:
   `{"1":"{contact.first_name}","2":"cid1={contact.contact_id}&{contact.checksum}"}`.
-  Alleen CiviCRM-tokens, geen `{$...}`-variabelen. Dit is de standaardkeuze.
-* **Smarty aan** (`smarty=use`) + token_example met **`{ldelim}`/`{rdelim}`** in plaats van
-  letterlijke accolades, zodat Smarty de JSON niet als eigen syntax leest:
-  `{capture assign="otlfull"}{contact.custom_2216}{/capture}{assign var="otlsuffix" value=$otlfull|regex_replace:"#^https://www\.onvergetelijk\.nl/#":""}{ldelim}"1":"{contact.first_name}","2":"{$user_kampkort}","3":"{$otlsuffix}"{rdelim}`.
-  Nodig zodra een variabele Smarty vergt: `{$user_kampkort}` e.d. (het subjectvars-blok van
-  nl.onvergetelijk.cssinliner) of string-bewerkingen zoals het afknippen van het domein van de
-  one-time-loginlink (PRIVACY `onetimelink_url`, custom 2216) tot het pad-suffix voor een
-  URL-knop.
+  CiviCRM tokens only, no `{$...}` variables. This is the default choice.
+* **Smarty on** (`smarty=use`) + token_example written with **`{ldelim}`/`{rdelim}`** instead
+  of literal braces, so Smarty does not read the JSON as its own syntax:
+  `{capture assign="link"}{contact.custom_123}{/capture}{assign var="path" value=$link|regex_replace:"#^https://example\.org/#":""}{ldelim}"1":"{contact.first_name}","2":"{$path}"{rdelim}`.
+  Needed as soon as a variable requires Smarty — string operations such as stripping the
+  domain off a stored URL down to the path suffix for a URL button, as in the example above.
 
-De verkeerde combinatie faalt pas bij het vuren van de rule: gewone JSON door Smarty geeft een
-parse-fout, `{ldelim}` zonder Smarty blijft letterlijk staan en levert ongeldige JSON op.
+The wrong combination only fails when the rule fires: plain JSON through Smarty raises a
+parse error, and `{ldelim}` without Smarty is left as-is, producing invalid JSON.
 
 ## Known issues
 

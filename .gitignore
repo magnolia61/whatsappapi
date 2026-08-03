@@ -1,4 +1,3 @@
 .phpunit.result.cache
-.claude/
 vendor/
 composer.lock

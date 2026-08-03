@@ -49,12 +49,13 @@ class CRM_Whatsappapi_CivirulesAction extends CRM_CivirulesActions_Generic_Api {
       $parameters['activity_id'] = $triggerData->getEntityId();
     }
 
-    // Type 'template': een provider-side goedgekeurde template (bij Twilio een Content
-    // Template). LET OP de naad: template_id betekent in deze route iets anders dan bij
-    // 'text'. De Twilio-provider zoekt er een rij in civicrm_whatsapp_template mee op
-    // (namespace = Content SID, token_example = variabelen-JSON), GEEN msg_template.
-    // Daarom bewaart het formulier de keuze apart als whatsapp_template_id en wordt die
-    // hier op template_id gezet; de msg_template-hydratie hieronder blijft buiten schot.
+    // Type 'template': a provider-side approved template (a Content Template at
+    // Twilio). Mind the seam: template_id means something different on this route
+    // than it does for 'text'. The Twilio provider uses it to look up a row in
+    // civicrm_whatsapp_template (namespace = Content SID, token_example = the
+    // variables JSON) — NOT a msg_template. That is why the form stores the choice
+    // separately as whatsapp_template_id, which is mapped onto template_id here;
+    // the msg_template hydration below stays out of this route entirely.
     if (($parameters['type'] ?? 'text') === 'template') {
       if (empty($parameters['whatsapp_template_id'])) {
         throw new CRM_Core_Exception(
@@ -71,37 +72,38 @@ class CRM_Whatsappapi_CivirulesAction extends CRM_CivirulesActions_Generic_Api {
           'whatsappapi: active WhatsApp template ' . $parameters['whatsapp_template_id'] . ' was not found.'
         );
       }
-      // De tekst is in deze route alleen de lokale weerslag (civicrm_whatsapp.body):
-      // wat de ontvanger daadwerkelijk ziet, rendert Meta uit de goedgekeurde template.
-      // De spiegel-tekst van de registratie meegeven houdt het archief leesbaar.
+      // On this route the text is only the local record (civicrm_whatsapp.body):
+      // what the recipient actually sees is rendered by Meta from the approved
+      // template. Passing the registration's mirror text keeps the archive readable.
       $parameters['text'] = $whatsappTemplate['text'];
       $parameters['template_id'] = $whatsappTemplate['id'];
       return $parameters;
     }
 
-    // Zet de tekst van de message template klaar. Dit MOET hier gebeuren: de whatsapp-extensie
-    // declareert template_id wel in zijn API-spec, maar leest de template nergens uit - zonder
-    // deze stap vertrekt er een leeg bericht. (smsapi doet hetzelfde werk in zijn eigen
-    // api/v3/Sms/Send.php.)
+    // Prepare the message template's text. This MUST happen here: the whatsapp
+    // extension declares template_id in its API spec but never reads the template,
+    // so without this step an empty message goes out. (smsapi does the same work in
+    // its own api/v3/Sms/Send.php.)
     //
-    // Alleen de RUWE tekst meegeven, geen tokens vervangen: dat doet Whatsapp::send() zelf via
-    // Whatsapp.replaceTokens. Zou je het hier ook doen, dan draait de tokenvervanging twee keer.
+    // Pass on the RAW text only, without replacing tokens: Whatsapp::send() does
+    // that itself via Whatsapp.replaceTokens. Doing it here as well would run the
+    // token replacement twice.
     if (!empty($parameters['template_id']) && empty($parameters['text'])) {
       $messageTemplate = new CRM_Core_DAO_MessageTemplate();
       $messageTemplate->id = $parameters['template_id'];
       $messageTemplate->is_active = TRUE;
       if ($messageTemplate->find(TRUE)) {
-        $tekst = $messageTemplate->msg_text;
-        if (empty($tekst) && !empty($messageTemplate->msg_html)) {
-          // Alleen een HTML-body: platmaken, want WhatsApp kent geen HTML.
-          $tekst = CRM_Utils_String::htmlToText($messageTemplate->msg_html);
+        $text = $messageTemplate->msg_text;
+        if (empty($text) && !empty($messageTemplate->msg_html)) {
+          // Only an HTML body: flatten it, WhatsApp has no notion of HTML.
+          $text = CRM_Utils_String::htmlToText($messageTemplate->msg_html);
         }
-        if (trim((string) $tekst) === '') {
+        if (trim((string) $text) === '') {
           throw new CRM_Core_Exception(
             'whatsappapi: message template ' . $parameters['template_id'] . ' has no text or HTML body.'
           );
         }
-        $parameters['text'] = $tekst;
+        $parameters['text'] = $text;
       }
       else {
         throw new CRM_Core_Exception(
@@ -134,7 +136,7 @@ class CRM_Whatsappapi_CivirulesAction extends CRM_CivirulesActions_Generic_Api {
 
     $template = ts('unknown template');
     if (($params['type'] ?? 'text') === 'template' && !empty($params['whatsapp_template_id'])) {
-      // Template-route: de titel komt uit civicrm_whatsapp_template, niet uit msg_template.
+      // Template route: the title comes from civicrm_whatsapp_template, not msg_template.
       $whatsappTemplate = \Civi\Api4\WhatsappTemplate::get(FALSE)
         ->addSelect('title')
         ->addWhere('id', '=', $params['whatsapp_template_id'])
